@@ -1,6 +1,6 @@
+# assertion
 [![Go Reference](https://pkg.go.dev/badge/github.com/dekarrin/assertion.svg)](https://pkg.go.dev/github.com/dekarrin/assertion)
 
-# assertion
 This is a library that is used for testing in golang.
 
 All assertions are performed by an Asserter which wraps a *testing.T and calls
