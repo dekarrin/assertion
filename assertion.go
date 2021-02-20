@@ -197,11 +197,58 @@ func (a Asserter) EqualSlicesFunc(expected, actual interface{}, elemComp func(ex
 		}
 
 		if !eq {
-			eVerb := fmtVerbForArg(expected)
-			aVerb := fmtVerbForArg(actual)
+			eVerb := fmtVerbForArg(eVal)
+			aVerb := fmtVerbForArg(aVal)
 			a.fail("expected %s to be "+eVerb+" but was "+aVerb, varName, eVal, aVal)
 		}
 	}
+}
+
+// PanicsWith asserts that the provided operation causes a panic with the
+// provided value.
+func (a Asserter) PanicsWith(expected interface{}, operation func()) {
+	var panicked bool
+	var actual interface{}
+	defer func() {
+		if panicErr := recover(); panicErr != nil {
+			actual = panicErr
+			panicked = true
+		}
+		varName := a.fullOpVar()
+		if !panicked {
+			eVerb := fmtVerbForArg(expected)
+			a.fail("expected %s to panic with "+eVerb+" but got none", varName, expected, skipArg{nil})
+		}
+
+		eq, err := checkEqual(expected, actual, nil)
+		if err != nil {
+			a.fail("comparison for %s failed; expected and actual are not comparable types", varName, skipArg{expected}, skipArg{actual})
+		}
+
+		if !eq {
+			eVerb := fmtVerbForArg(expected)
+			aVerb := fmtVerbForArg(actual)
+			a.fail("expected %s to panic with "+eVerb+" but actually panicked with "+aVerb, varName, expected, actual)
+		}
+	}()
+
+	operation()
+}
+
+// Panics asserts that the provided operation causes a panic.
+func (a Asserter) Panics(operation func()) {
+	var panicked bool
+	defer func() {
+		if panicErr := recover(); panicErr != nil {
+			panicked = true
+		}
+		varName := a.fullOpVar()
+		if !panicked {
+			a.fail("expected %s to panic but got none", varName, skipArg{true}, skipArg{false})
+		}
+	}()
+
+	operation()
 }
 
 // adds caller info to front of given string if it is available.
@@ -301,6 +348,21 @@ func (a Asserter) fullVar() string {
 		name = a.VarNamePrefix + "'s value"
 	} else {
 		name = "value"
+	}
+	return name
+}
+
+// returns the currently defined VarName or else "the operation" if it is
+// undefined. If VarNamePrefix is defined and VarName is also defined,
+// VarNamePrefix is prepended to the result.
+func (a Asserter) fullOpVar() string {
+	var name string
+	if a.VarName != "" {
+		name = a.VarNamePrefix + a.VarName
+	} else if a.VarNamePrefix != "" {
+		name = a.VarNamePrefix + "'s execution"
+	} else {
+		name = "the operation"
 	}
 	return name
 }
